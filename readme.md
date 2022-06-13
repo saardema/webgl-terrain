@@ -1,6 +1,6 @@
-# Three.js Starter
-Courtesy of Bruno Simon of https://threejs-journey.xyz/
-and Gary Simon of https://designcourse.com/
+# WebGL2 Terrain with Three.js
+Courtesy of [Bruno Simon](https://threejs-journey.xyz)
+and [Gary Simon](https://designcourse.com)
 
 ## Setup
 Download [Node.js](https://nodejs.org/en/download/).
