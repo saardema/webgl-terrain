@@ -1,17 +1,18 @@
 # Three.js Starter
 Courtesy of Bruno Simon of https://threejs-journey.xyz/
+and Gary Simon of https://designcourse.com/
 
 ## Setup
 Download [Node.js](https://nodejs.org/en/download/).
-Run this followed commands:
+Run the following commands:
 
 ``` bash
-# Install dependencies (only the first time)
+# Install dependencies 
 npm install
 
 # Run the local server at localhost:8080
 npm run dev
 
-# Build for production in the dist/ directory
+# OR Build for production in the dist/ directory
 npm run build
 ```
