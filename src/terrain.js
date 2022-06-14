@@ -5,16 +5,15 @@ const terrain = {}
 
 terrain.config = {
     scale: 100,
-    width: 64,
-    height: 64,
+    detail: 128,
     noise: {
         offset: 0,
-        terrainScale: 2.1,
-        baseFrequency: 10,
-        iterations: 10,
+        terrainScale: 24,
+        baseFrequency: 2.2,
+        iterations: 8,
         maxIterations: 16,
-        scaleMult: 0.36,
-        freqMult: 2.551,
+        scaleMult: 0.547,
+        freqMult: 1.677,
         seed: 11
     }
 }
@@ -22,12 +21,12 @@ terrain.config = {
 const geometry = new THREE.PlaneBufferGeometry(
     terrain.config.scale,
     terrain.config.scale,
-    terrain.config.width - 1,
-    terrain.config.height - 1
+    terrain.config.detail - 1,
+    terrain.config.detail - 1
 )
 
-const texture = new THREE.DataTexture(clrData, terrain.config.width, terrain.config.height,)
-texture.flipY = true
+// const texture = new THREE.DataTexture(clrData, terrain.config.detail, terrain.config.detail)
+// texture.flipY = true
 // texture.anisotropy = 2
 
 const material = new THREE.MeshStandardMaterial({
@@ -35,19 +34,15 @@ const material = new THREE.MeshStandardMaterial({
     // map: texture,
     // opacity: .1,
     // transparent: true,
-    wireframe: true,
+    // wireframe: true,
 })
 
 terrain.mesh = new THREE.Mesh(geometry, material)
 terrain.mesh.rotateX(-Math.PI / 2)
 
-const clrDataSize = terrain.config.width * terrain.config.height
-let clrData = new Uint8Array(4 * clrDataSize)
+// const clrDataSize = terrain.config.detail * terrain.config.detail
+// let clrData = new Uint8Array(4 * clrDataSize)
 
-let noiseGens = []
-for (let i = 0; i < terrain.config.noise.maxIterations; i++) {
-    noiseGens[i] = new Noise(terrain.config.noise.seed + i)
-}
 
 const generateTextureFromNoiseMap = (normalize = false) => {
     let lowest = - 1
@@ -82,20 +77,24 @@ const generateTextureFromNoiseMap = (normalize = false) => {
     texture.needsUpdate = true
 }
 
-terrain.build = (regenerateNoiseMap = false) => {
+const clock = new THREE.Clock()
+terrain.build = () => {
     const position = geometry.attributes.position
-
-    if (regenerateNoiseMap) {
-        // generateTextureFromNoiseMap(true)
-    }
-
+    clock.getDelta()
     for (let vIndex = 0; vIndex < position.count; vIndex++) {
-        const x = vIndex % terrain.config.width
-        const y = Math.floor(vIndex / terrain.config.width)
+        const x = vIndex % terrain.config.detail
+        const y = Math.floor(vIndex / terrain.config.detail)
         position.array[vIndex * 3 + 2] = getHeight(x, y) * terrain.config.noise.terrainScale
     }
 
+    geometry.computeVertexNormals()
     position.needsUpdate = true
+    console.log(`Terrain build: ${parseInt(clock.getDelta() * 1000)}ms`);
+}
+
+let noiseGens = []
+for (let i = 0; i < terrain.config.noise.maxIterations; i++) {
+    noiseGens[i] = new Noise(terrain.config.noise.seed + i)
 }
 
 const getHeight = (x, y) => {
@@ -104,8 +103,8 @@ const getHeight = (x, y) => {
     let freq = terrain.config.noise.baseFrequency
 
     for (let i = 0; i < terrain.config.noise.iterations; i++) {
-        const x2 = x / terrain.config.width * freq
-        const y2 = (y + terrain.config.noise.offset) / terrain.config.height * freq
+        const x2 = x / terrain.config.detail * freq
+        const y2 = (y + terrain.config.noise.offset) / terrain.config.detail * freq
         v += noiseGens[i].perlin2(x2, y2) * scale
         freq *= terrain.config.noise.freqMult
         scale *= terrain.config.noise.scaleMult
@@ -114,6 +113,6 @@ const getHeight = (x, y) => {
     return v
 }
 
-terrain.build(true)
+terrain.build()
 
 export default terrain

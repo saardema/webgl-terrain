@@ -4,9 +4,10 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import Stats from 'three/examples/jsm/libs/stats.module'
 
 import { renderer, camera } from './renderer'
-import gui from './gui.js'
-import lights from './lights.js'
-import terrain from './terrain.js'
+import sky from './sky'
+import lights from './lights'
+import terrain from './terrain'
+import gui from './gui'
 
 // Time
 const clock = new THREE.Clock()
@@ -19,14 +20,16 @@ document.body.appendChild(stats.dom)
 const controls = new OrbitControls(camera, renderer.domElement)
 // controls.autoRotate = true
 
-// Camera
-// camera.position.set(3, 2, 7)
-
 // Scene
 const scene = new THREE.Scene()
+scene.add(sky.mesh)
 scene.add(terrain.mesh)
-scene.add(...lights)
+scene.add(...lights.array)
 scene.add(camera)
+
+const init = () => {
+    sky.update()
+}
 
 // Loop
 const animate = () => {
@@ -46,4 +49,5 @@ const animate = () => {
 }
 
 // Start
+init()
 renderer.setAnimationLoop(animate)

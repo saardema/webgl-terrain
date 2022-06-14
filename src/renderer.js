@@ -7,10 +7,15 @@ const sizes = {
 
 const renderer = new THREE.WebGLRenderer({antialias:true})
 renderer.outputEncoding = THREE.LinearEncoding;
-renderer.toneMapping = THREE.NoToneMapping;
+// renderer.toneMapping = THREE.NoToneMapping;
+// renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.setSize(sizes.width, sizes.height)
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+
 const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.01, 1000)
+camera.position.set(-33, 20, 64)
+
 document.body.appendChild(renderer.domElement)
 
 window.addEventListener('resize', () =>
