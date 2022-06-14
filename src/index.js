@@ -3,9 +3,9 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import Stats from 'three/examples/jsm/libs/stats.module'
 
-import { renderer, camera, sizes } from './renderer'
-import lights from './lights.js'
+import { renderer, camera } from './renderer'
 import gui from './gui.js'
+import lights from './lights.js'
 import terrain from './terrain.js'
 
 // Time
@@ -19,28 +19,27 @@ document.body.appendChild(stats.dom)
 const controls = new OrbitControls(camera, renderer.domElement)
 // controls.autoRotate = true
 
-// const axesHelper = new THREE.AxesHelper( 5 )
-// scene.add( axesHelper )
-
 // Camera
-camera.position.set(3, 2, 7)
-controls.update()
+// camera.position.set(3, 2, 7)
 
 // Scene
 const scene = new THREE.Scene()
-scene.add(...lights)
 scene.add(terrain.mesh)
+scene.add(...lights)
 scene.add(camera)
 
 // Loop
 const animate = () => {
-    terrain.config.offset += clock.getDelta()
-
-    // controls.update()
     stats.update()
-    // mapCfg.noise.offset -= 1
+
+    // terrain.config.noise.offset -= 1
+    // terrain.config.offset += clock.getDelta()
     // terrain.build()
 
+    // camera.position.z -= .01
+    // camera.rotateOnAxis(new THREE.Vector3(0, .4, .1), 0.003)
+
+    controls.update()
     gui.updateDisplay()
 
     renderer.render(scene, camera)

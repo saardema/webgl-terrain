@@ -4,41 +4,32 @@ import { Noise } from 'noisejs'
 const terrain = {}
 
 terrain.config = {
-    scale: 15,
-    width: 512,
-    height: 512,
+    scale: 100,
+    width: 64,
+    height: 64,
     noise: {
         offset: 0,
         terrainScale: 2.1,
-        baseFrequency: 2.7,
+        baseFrequency: 10,
         iterations: 10,
         maxIterations: 16,
         scaleMult: 0.36,
         freqMult: 2.551,
-        seed: Math.random()
+        seed: 11
     }
 }
 
-const planeGeometry = new THREE.PlaneBufferGeometry(
+const geometry = new THREE.PlaneBufferGeometry(
     terrain.config.scale,
     terrain.config.scale,
     terrain.config.width - 1,
     terrain.config.height - 1
 )
 
-let noiseGens = []
-for (let i = 0; i < terrain.config.noise.maxIterations; i++) {
-    noiseGens[i] = new Noise(terrain.config.noise.seed + i)
-}
-
-const clrDataSize = terrain.config.width * terrain.config.height
-let clrData = new Uint8Array(4 * clrDataSize)
-
 const texture = new THREE.DataTexture(clrData, terrain.config.width, terrain.config.height,)
 texture.flipY = true
 // texture.anisotropy = 2
 
-// Materials
 const material = new THREE.MeshStandardMaterial({
     color: '#FFF',
     // map: texture,
@@ -47,9 +38,16 @@ const material = new THREE.MeshStandardMaterial({
     wireframe: true,
 })
 
-// Mesh
-terrain.mesh = new THREE.Mesh(planeGeometry, material)
+terrain.mesh = new THREE.Mesh(geometry, material)
 terrain.mesh.rotateX(-Math.PI / 2)
+
+const clrDataSize = terrain.config.width * terrain.config.height
+let clrData = new Uint8Array(4 * clrDataSize)
+
+let noiseGens = []
+for (let i = 0; i < terrain.config.noise.maxIterations; i++) {
+    noiseGens[i] = new Noise(terrain.config.noise.seed + i)
+}
 
 const generateTextureFromNoiseMap = (normalize = false) => {
     let lowest = - 1
@@ -85,7 +83,7 @@ const generateTextureFromNoiseMap = (normalize = false) => {
 }
 
 terrain.build = (regenerateNoiseMap = false) => {
-    const position = planeGeometry.attributes.position
+    const position = geometry.attributes.position
 
     if (regenerateNoiseMap) {
         // generateTextureFromNoiseMap(true)
@@ -96,6 +94,7 @@ terrain.build = (regenerateNoiseMap = false) => {
         const y = Math.floor(vIndex / terrain.config.width)
         position.array[vIndex * 3 + 2] = getHeight(x, y) * terrain.config.noise.terrainScale
     }
+
     position.needsUpdate = true
 }
 
