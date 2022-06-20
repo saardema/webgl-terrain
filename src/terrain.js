@@ -1,118 +1,236 @@
 import * as THREE from 'three'
 import { Noise } from 'noisejs'
+import { VertexNormalsHelper } from 'three/examples/jsm/helpers/VertexNormalsHelper'
+import { Vector2, Vector3 } from 'three'
+import dist from 'webpack-merge'
 
-const terrain = {}
+const clock = new THREE.Clock()
 
-terrain.config = {
-    scale: 100,
-    detail: 128,
-    noise: {
-        offset: 0,
-        terrainScale: 24,
-        baseFrequency: 2.2,
-        iterations: 8,
-        maxIterations: 16,
-        scaleMult: 0.547,
-        freqMult: 1.677,
-        seed: 11
+class Chunk {
+    constructor(chunk_x, chunk_z, config) {
+        this.chunk_x = chunk_x
+        this.chunk_z = chunk_z
+        this.worldPosition = new Vector3(chunk_x * ChunkLoader.config.scale, 0, chunk_z * ChunkLoader.config.scale)
+        this.config = config
+        this.noiseGenerators = []
+        this.createNoiseGenerators(this.config.noise.maxIterations)
+
+        // Build base geometry with 1 vertex wide border
+        // to allow edge normals to be calculated for proper seams
+        this.geometry = new THREE.PlaneBufferGeometry(
+            this.config.scale + this.config.scale / this.config.detail * 2,
+            this.config.scale + this.config.scale / this.config.detail * 2,
+            this.config.detail + 2,
+            this.config.detail + 2
+        )
+
+        // Flatten
+        this.geometry.rotateX(-Math.PI / 2)
+
+        // Set origin to top left corner
+        this.geometry.translate(this.config.scale / 2, 0, this.config.scale / 2)
+
+        this.mesh = new THREE.Mesh(this.geometry, Chunk.material)
+        this.mesh.position.add(this.worldPosition)
     }
-}
 
-const geometry = new THREE.PlaneBufferGeometry(
-    terrain.config.scale,
-    terrain.config.scale,
-    terrain.config.detail - 1,
-    terrain.config.detail - 1
-)
+    static material = new THREE.MeshStandardMaterial({
+        color: '#FFF',
+        // wireframe: true,
+    })
 
-// const texture = new THREE.DataTexture(clrData, terrain.config.detail, terrain.config.detail)
-// texture.flipY = true
-// texture.anisotropy = 2
+    destroy() {
+        this.geometry.dispose()
+    }
 
-const material = new THREE.MeshStandardMaterial({
-    color: '#FFF',
-    // map: texture,
-    // opacity: .1,
-    // transparent: true,
-    // wireframe: true,
-})
+    build() {
+        const index = this.geometry.getIndex()
+        const posAttr = this.geometry.getAttribute('position')
+        const normAttr = this.geometry.getAttribute('normal')
 
-terrain.mesh = new THREE.Mesh(geometry, material)
-terrain.mesh.rotateX(-Math.PI / 2)
+        // Positions
+        for (let i = 0; i < posAttr.array.length; i += 3) {
+            const x = posAttr.array[i] + this.worldPosition.x
+            const z = posAttr.array[i + 2] + this.worldPosition.z
+            const y = this.getHeight(x, z)
 
-// const clrDataSize = terrain.config.detail * terrain.config.detail
-// let clrData = new Uint8Array(4 * clrDataSize)
+            posAttr.array[i + 1] = y
+        }
 
+        this.geometry.computeVertexNormals()
 
-const generateTextureFromNoiseMap = (normalize = false) => {
-    let lowest = - 1
-    let highest = 1
+        if (index.version == 0) {
+            const indexArray = []
+            const borderIndexArray = []
 
-    if (normalize) {
-        lowest = Number.MAX_SAFE_INTEGER
-        highest = -Number.MAX_SAFE_INTEGER
+            for (let i = 0; i < index.count; i += 3) {
+                const vA = index.getX(i);
+                const vB = index.getX(i + 1);
+                const vC = index.getX(i + 2);
+                const pA = new Vector3().fromBufferAttribute(posAttr, vA)
+                const pB = new Vector3().fromBufferAttribute(posAttr, vB)
+                const pC = new Vector3().fromBufferAttribute(posAttr, vC)
 
-        for (let i = 0; i < clrDataSize; i++) {
-            const x = i % config.width
-            const y = Math.floor(i / config.width)
-            let h = getHeight(x, y)
-            if (h > highest) highest = h
-            if (h < lowest) lowest = h
+                // Separate border triangles so they can be hidden
+                const s = this.config.scale
+                if (pC.x < 0 || pC.z < 0 || pA.x < 0 || pA.z < 0 || pC.x > s || pC.z > s || pB.x > s || pB.z > s) {
+                    borderIndexArray.push(vA)
+                    borderIndexArray.push(vB)
+                    borderIndexArray.push(vC)
+                } else {
+                    indexArray.push(vA)
+                    indexArray.push(vB)
+                    indexArray.push(vC)
+                }
+            }
+
+            for (let i = 0; i < index.array.length; i++) {
+                if (i < indexArray.length) {
+                    index.array[i] = indexArray[i]
+                } else {
+                    index.array[i] = borderIndexArray[i - indexArray.length]
+                }
+                this.geometry.setDrawRange(0, indexArray.length)
+            }
+
+            index.needsUpdate = true
+        }
+
+        this.geometry.attributes.position.needsUpdate = true
+        this.geometry.attributes.normal.needsUpdate = true
+    }
+
+    createNoiseGenerators(amount) {
+        for (let i = 0; i < amount; i++) {
+            this.noiseGenerators[i] = new Noise(this.config.noise.seed + i)
         }
     }
 
-    for (let i = 0; i < clrDataSize; i++) {
-        const stride = i * 4
-        const x = i % config.width
-        const y = Math.floor(i / config.width)
-        let c = getHeight(x, y)
-        c = THREE.MathUtils.mapLinear(c, lowest, highest, 0, 255)
-        c = parseInt(c)
-        clrData[stride + 0] = c
-        clrData[stride + 1] = c
-        clrData[stride + 2] = c
-        clrData[stride + 3] = 255
+    getHeight(x, z) {
+        let h = 0
+        let scale = 1
+        let freq = this.config.noise.baseFrequency
+
+        for (let i = 0; i < this.config.noise.iterations; i++) {
+            const x2 = x / this.config.scale * freq
+            const z2 = (z + this.config.noise.offset) / this.config.scale * freq
+
+            h += this.noiseGenerators[i].perlin2(x2, z2) * scale
+            freq *= this.config.noise.freqMult
+            scale *= this.config.noise.scaleMult
+        }
+
+        h *= this.config.noise.terrainScale
+
+        return h
     }
 
-    texture.needsUpdate = true
+    static getNormalFromTriangle(pA, pB, pC) {
+        cb.subVectors(pC, pB)
+        ab.subVectors(pA, pB)
+        cb.cross(ab)
+
+        return cb
+    }
 }
 
-const clock = new THREE.Clock()
-terrain.build = () => {
-    const position = geometry.attributes.position
-    clock.getDelta()
-    for (let vIndex = 0; vIndex < position.count; vIndex++) {
-        const x = vIndex % terrain.config.detail
-        const y = Math.floor(vIndex / terrain.config.detail)
-        position.array[vIndex * 3 + 2] = getHeight(x, y) * terrain.config.noise.terrainScale
+class ChunkLoader {
+    constructor(scene, camera) {
+        this.camera = camera
+        this.scene = scene
+        this.chunks = []
+        this.group = new THREE.Object3D()
+        this.walker = new THREE.Vector2(this.camera.position.x, this.camera.position.z)
     }
 
-    geometry.computeVertexNormals()
-    position.needsUpdate = true
-    console.log(`Terrain build: ${parseInt(clock.getDelta() * 1000)}ms`);
-}
-
-let noiseGens = []
-for (let i = 0; i < terrain.config.noise.maxIterations; i++) {
-    noiseGens[i] = new Noise(terrain.config.noise.seed + i)
-}
-
-const getHeight = (x, y) => {
-    let v = 0
-    let scale = 1
-    let freq = terrain.config.noise.baseFrequency
-
-    for (let i = 0; i < terrain.config.noise.iterations; i++) {
-        const x2 = x / terrain.config.detail * freq
-        const y2 = (y + terrain.config.noise.offset) / terrain.config.detail * freq
-        v += noiseGens[i].perlin2(x2, y2) * scale
-        freq *= terrain.config.noise.freqMult
-        scale *= terrain.config.noise.scaleMult
+    static config = {
+        scale: 100,
+        detail: 100,
+        noise: {
+            offset: 0,
+            terrainScale: 24,
+            baseFrequency: 2.2,
+            iterations: 12,
+            maxIterations: 16,
+            scaleMult: 0.547,
+            freqMult: 1.677,
+            seed: 11
+        }
     }
 
-    return v
+    update() {
+        this.walker.set(this.camera.position.x, this.camera.position.z)
+        const nearest_chunk_x = Math.round(this.camera.position.x / ChunkLoader.config.scale)
+        const nearest_chunk_z = Math.round(this.camera.position.z / ChunkLoader.config.scale)
+
+        for (let x = -5; x <= 5; x++) {
+            for (let z = -5; z <= 5; z++) {
+                const near_chunk_x = nearest_chunk_x + x
+                const near_chunk_z = nearest_chunk_z + z
+
+                if (!this.chunkExists(near_chunk_x, near_chunk_z)) {
+                    const chunkPos2D = new Vector2(near_chunk_x * ChunkLoader.config.scale, near_chunk_z * ChunkLoader.config.scale)
+                    const distance2D = chunkPos2D.sub(this.walker).length()
+                   
+                    if (distance2D < 500) {
+                        this.createChunk(near_chunk_x, near_chunk_z, ChunkLoader.config)
+                    }
+                }
+            }
+        }
+
+        for (const chunk of this.chunks) {
+            const chunkPos2D = new Vector2(chunk.worldPosition.x, chunk.worldPosition.z)
+            const distance2D = chunkPos2D.subVectors(chunkPos2D, this.walker).length()
+
+            if (distance2D > 600) {
+                this.destroyChunk(chunk)
+            }
+        }
+    }
+
+    createChunk(x, z) {
+        clock.getDelta()
+        const chunk = new Chunk(x, z, ChunkLoader.config)
+        chunk.build()
+        this.chunks.push(chunk)
+        this.group.add(chunk.mesh)
+
+        console.log(`Create chunk [${chunk.chunk_x}, ${chunk.chunk_z}] in ${parseInt(clock.getDelta() * 1000)}ms`)
+    }
+
+    destroyChunk(chunk) {
+        chunk.destroy()
+        this.chunks = this.chunks.filter(c => c !== chunk)
+        this.group.remove(chunk.mesh)
+
+        console.log(`Destroy chunk [${chunk.chunk_x}, ${chunk.chunk_z}]`);
+    }
+
+    chunkExists(x, z) {
+        for (const c of this.chunks) {
+            if (c.chunk_x === x && c.chunk_z === z) {
+                return true
+            }
+        }
+
+        return false
+    }
+
+    getMeshes() {
+        const meshes = []
+
+        for (const chunk of this.chunks) {
+            meshes.push(chunk.mesh)
+        }
+
+        return meshes
+    }
 }
 
-terrain.build()
+const terrain = {
+    config: ChunkLoader.config,
+    ChunkLoader
+}
 
 export default terrain

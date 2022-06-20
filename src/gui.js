@@ -52,7 +52,7 @@ skyFolder.add(sky.config, 'mieCoefficient', 0.0, 0.1, 0.001).onChange(sky.update
 skyFolder.add(sky.config, 'mieDirectionalG', 0.0, 1, 0.001).onChange(sky.update)
 skyFolder.add(sky.config, 'elevation', 0, 90, 0.1).onChange(sky.update)
 skyFolder.add(sky.config, 'azimuth', - 180, 180, 0.1).onChange(sky.update)
-skyFolder.open()
+// skyFolder.open()
 
 // CAMERA
 const cameraFolder = gui.addFolder('camera')
@@ -69,9 +69,8 @@ cameraRotationFolder.add(camera.rotation, 'z').step(.01)
 
 // TERRAIN
 const noiseFolder = gui.addFolder('noise')
-// gui.remember(terrain.config)
-// noiseFolder.add(terrain.config, 'detail', 2, 2048).onFinishChange(terrain.build)
-// gui.remember(terrain.config.noise)
+gui.remember(terrain.config)
+gui.remember(terrain.config.noise)
 noiseFolder.add(terrain.config.noise, 'terrainScale', 0).onFinishChange(terrain.build)
 noiseFolder.add(terrain.config.noise, 'baseFrequency', 0).step(.1).onFinishChange(terrain.build)
 noiseFolder.add(terrain.config.noise, 'scaleMult').step(.001).onFinishChange(terrain.build)

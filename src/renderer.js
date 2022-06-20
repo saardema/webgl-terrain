@@ -1,4 +1,4 @@
-import * as THREE from "three"
+import * as THREE from 'three'
 
 const sizes = {
     width: window.innerWidth,
@@ -14,7 +14,6 @@ renderer.setSize(sizes.width, sizes.height)
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 
 const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.01, 1000)
-camera.position.set(-33, 20, 64)
 
 document.body.appendChild(renderer.domElement)
 

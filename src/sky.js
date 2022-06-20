@@ -35,5 +35,4 @@ sky.update = function () {
 
 sky.mesh.scale.setScalar(450000)
 
-// export { mesh as sky, sun, skyConfig, updateSky }
 export default sky
