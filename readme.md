@@ -1,6 +1,4 @@
 # WebGL2 Terrain with Three.js
-Based on work from of [Bruno Simon](https://threejs-journey.xyz)
-and [Gary Simon](https://designcourse.com)
 
 ## Setup
 Download [Node.js](https://nodejs.org/en/download/).
