@@ -13,7 +13,7 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.setSize(sizes.width, sizes.height)
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 
-const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.01, 1000)
+const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.01, 10000)
 
 document.body.appendChild(renderer.domElement)
 

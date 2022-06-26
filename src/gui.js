@@ -1,9 +1,8 @@
 import * as dat from 'dat.gui'
 
-import { renderer } from './renderer'
+import { renderer, camera } from './renderer'
 import lights from './lights'
-import terrain from './terrain'
-import { camera } from './renderer'
+import ChunkLoader from './ChunkLoader'
 import sky from './sky'
 
 const gui = new dat.GUI()
@@ -17,10 +16,13 @@ const mapColor = (color, toGui) => {
 
 const lightsFolder = gui.addFolder('lights')
 lights.array.map((light, i) => {
-    const lightFolder = lightsFolder.addFolder(`${i + 1} ${light.type}`)
-    // gui.remember(light)
-    // gui.remember(light.position)
-    // gui.remember(light.rotation)
+    const lightFolder = lightsFolder.addFolder(`${i + 1} ${light.name}`)
+
+    if (light.name === 'CounterSunlight') {
+        gui.remember(light)
+        gui.remember(light.position)
+        gui.remember(light.rotation)
+    }
 
     lightFolder.add(light, 'intensity').step(.01)
     light.guiColor = mapColor(light.color, true)
@@ -69,14 +71,14 @@ cameraRotationFolder.add(camera.rotation, 'z').step(.01)
 
 // TERRAIN
 const noiseFolder = gui.addFolder('noise')
-gui.remember(terrain.config)
-gui.remember(terrain.config.noise)
-noiseFolder.add(terrain.config.noise, 'terrainScale', 0).onFinishChange(terrain.build)
-noiseFolder.add(terrain.config.noise, 'baseFrequency', 0).step(.1).onFinishChange(terrain.build)
-noiseFolder.add(terrain.config.noise, 'scaleMult').step(.001).onFinishChange(terrain.build)
-noiseFolder.add(terrain.config.noise, 'freqMult').step(.001).onFinishChange(terrain.build)
-noiseFolder.add(terrain.config.noise, 'iterations', 1, terrain.config.noise.maxIterations, 1).onFinishChange(terrain.build)
-noiseFolder.add(terrain.config.noise, 'offset').step(.01).onFinishChange(terrain.build)
+// gui.remember(ChunkLoader.config)
+// gui.remember(ChunkLoader.config.noise)
+noiseFolder.add(ChunkLoader.config.noise, 'terrainScale', 0)
+noiseFolder.add(ChunkLoader.config.noise, 'baseFrequency', 0).step(.1)
+noiseFolder.add(ChunkLoader.config.noise, 'scaleMult').step(.001)
+noiseFolder.add(ChunkLoader.config.noise, 'freqMult').step(.001)
+noiseFolder.add(ChunkLoader.config.noise, 'iterations', 1, ChunkLoader.config.noise.maxIterations, 1)
+noiseFolder.add(ChunkLoader.config.noise, 'offset').step(.01)
 
 // RENDERER
 gui.remember(renderer)

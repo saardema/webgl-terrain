@@ -1,5 +1,4 @@
 import * as THREE from 'three'
-import lights from './lights'
 import { Sky } from 'three/examples/jsm/objects/Sky'
 
 const sky = {}
@@ -10,9 +9,9 @@ sky.sun = new THREE.Vector3()
 
 sky.config = {
     turbidity: 10,
-    rayleigh: 3,
-    mieCoefficient: 0.016,
-    mieDirectionalG: 0.8,
+    rayleigh: .5,
+    mieCoefficient: 0.017,
+    mieDirectionalG: 0.964,
     elevation: 50,
     azimuth: 180,
 }
@@ -30,7 +29,7 @@ sky.update = function () {
     sky.sun.setFromSphericalCoords(1, phi, theta)
 
     uniforms['sunPosition'].value.copy(sky.sun)
-    lights.setLightFromSun(sky.sun)
+    // lights.setLightFromSun(sky.sun)
 }
 
 sky.mesh.scale.setScalar(450000)

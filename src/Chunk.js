@@ -1,16 +1,12 @@
 import * as THREE from 'three'
-import { Noise } from 'noisejs'
-import { VertexNormalsHelper } from 'three/examples/jsm/helpers/VertexNormalsHelper'
 import { Vector2, Vector3 } from 'three'
-import dist from 'webpack-merge'
-
-const clock = new THREE.Clock()
+import { Noise } from 'noisejs'
 
 class Chunk {
     constructor(chunk_x, chunk_z, config) {
         this.chunk_x = chunk_x
         this.chunk_z = chunk_z
-        this.worldPosition = new Vector3(chunk_x * ChunkLoader.config.scale, 0, chunk_z * ChunkLoader.config.scale)
+        this.worldPosition = new Vector3(chunk_x * config.scale, 0, chunk_z * config.scale)
         this.config = config
         this.noiseGenerators = []
         this.createNoiseGenerators(this.config.noise.maxIterations)
@@ -124,113 +120,6 @@ class Chunk {
 
         return h
     }
-
-    static getNormalFromTriangle(pA, pB, pC) {
-        cb.subVectors(pC, pB)
-        ab.subVectors(pA, pB)
-        cb.cross(ab)
-
-        return cb
-    }
 }
 
-class ChunkLoader {
-    constructor(scene, camera) {
-        this.camera = camera
-        this.scene = scene
-        this.chunks = []
-        this.group = new THREE.Object3D()
-        this.walker = new THREE.Vector2(this.camera.position.x, this.camera.position.z)
-    }
-
-    static config = {
-        scale: 100,
-        detail: 100,
-        noise: {
-            offset: 0,
-            terrainScale: 24,
-            baseFrequency: 2.2,
-            iterations: 12,
-            maxIterations: 16,
-            scaleMult: 0.547,
-            freqMult: 1.677,
-            seed: 11
-        }
-    }
-
-    update() {
-        this.walker.set(this.camera.position.x, this.camera.position.z)
-        const nearest_chunk_x = Math.round(this.camera.position.x / ChunkLoader.config.scale)
-        const nearest_chunk_z = Math.round(this.camera.position.z / ChunkLoader.config.scale)
-
-        for (let x = -5; x <= 5; x++) {
-            for (let z = -5; z <= 5; z++) {
-                const near_chunk_x = nearest_chunk_x + x
-                const near_chunk_z = nearest_chunk_z + z
-
-                if (!this.chunkExists(near_chunk_x, near_chunk_z)) {
-                    const chunkPos2D = new Vector2(near_chunk_x * ChunkLoader.config.scale, near_chunk_z * ChunkLoader.config.scale)
-                    const distance2D = chunkPos2D.sub(this.walker).length()
-                   
-                    if (distance2D < 500) {
-                        this.createChunk(near_chunk_x, near_chunk_z, ChunkLoader.config)
-                    }
-                }
-            }
-        }
-
-        for (const chunk of this.chunks) {
-            const chunkPos2D = new Vector2(chunk.worldPosition.x, chunk.worldPosition.z)
-            const distance2D = chunkPos2D.subVectors(chunkPos2D, this.walker).length()
-
-            if (distance2D > 600) {
-                this.destroyChunk(chunk)
-            }
-        }
-    }
-
-    createChunk(x, z) {
-        clock.getDelta()
-        const chunk = new Chunk(x, z, ChunkLoader.config)
-        chunk.build()
-        this.chunks.push(chunk)
-        this.group.add(chunk.mesh)
-
-        console.log(`Create chunk [${chunk.chunk_x}, ${chunk.chunk_z}] in ${parseInt(clock.getDelta() * 1000)}ms`)
-    }
-
-    destroyChunk(chunk) {
-        chunk.destroy()
-        this.chunks = this.chunks.filter(c => c !== chunk)
-        this.group.remove(chunk.mesh)
-
-        console.log(`Destroy chunk [${chunk.chunk_x}, ${chunk.chunk_z}]`);
-    }
-
-    chunkExists(x, z) {
-        for (const c of this.chunks) {
-            if (c.chunk_x === x && c.chunk_z === z) {
-                return true
-            }
-        }
-
-        return false
-    }
-
-    getMeshes() {
-        const meshes = []
-
-        for (const chunk of this.chunks) {
-            meshes.push(chunk.mesh)
-        }
-
-        return meshes
-    }
-}
-
-const terrain = {
-    config: ChunkLoader.config,
-    ChunkLoader
-}
-
-export default terrain
+export default Chunk
